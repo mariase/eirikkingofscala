@@ -1,0 +1,2 @@
+# eirikkingofscala
+Scala project
