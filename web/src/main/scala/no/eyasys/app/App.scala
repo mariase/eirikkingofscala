@@ -12,9 +12,11 @@ object App {
 
   def foo(x : Array[String]) = x.foldLeft("")((a,b) => a + b)
 
-  def dbConnect (x : String): Unit = {
+  def dbConnect (): Unit = {
 
-    val dbConfig = config.getConfig(x)
+    val dbType = config.getString("db.type")
+    val dbConfig = config.getConfig(dbType)
+    println("dbType = " + dbType)
     val driver = dbConfig.getString("driver")
     val url = dbConfig.getString("url")
     val username = dbConfig.getString("username")
@@ -27,7 +29,7 @@ object App {
 
     val statement = connection.createStatement()
 
-    if (x == "db.h2.mem"){
+    if (dbType == "db.h2.mem"){
       statement.execute("CREATE TABLE PERSON (id int primary key, name varchar(255))")
       statement.executeUpdate("INSERT INTO PERSON (id, name) VALUES (1,'Maria')")
     }
@@ -47,9 +49,9 @@ object App {
     println("concat arguments = " + foo(args))
 
     //val dbType = args(0)
-    println("dbType = " + args(0))
+    //println("dbType = " + args(0))
 
-    dbConnect(args(0))
+    dbConnect()
 
   }
 

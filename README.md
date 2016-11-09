@@ -1,9 +1,11 @@
 # eirikkingofscala
 Scala project
 
-TODO
+DONE
 main-klassen bør kunne kjøre uten argumenter
 bruk -D for config overrides istf argumenter til programmer
+
+TODO
 ta bort .gitignore fra common
 eneste plassen du trenger å definere version i pom.xml-filer er i referanser til parent og i selve parenten sin <version>-tag. Bruk ${project.version} på alle andre plasser.
 gå over til scala 2.11.8
