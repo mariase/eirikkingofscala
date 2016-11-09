@@ -10,9 +10,10 @@
   <groupId>no.eyasys.app</groupId>
   <artifactId>common</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
+  <version>${project.version}</version>
   <name>web Maven Webapp</name>
   <url>http://maven.apache.org</url>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -23,7 +24,7 @@
 	<dependency>
 		<groupId>no.eyasys.app</groupId>
 		<artifactId>common</artifactId>
-		<version>1.0-SNAPSHOT</version>
+		<version>${project.version}</version>
 	</dependency>
   </dependencies>
   <build>
