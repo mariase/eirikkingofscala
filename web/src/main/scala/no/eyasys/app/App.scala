@@ -3,6 +3,17 @@ import com.typesafe.config.ConfigFactory
 import java.sql.Connection
 import java.sql.DriverManager
 
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+//import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
+import akka.event.Logging
+
+import scala.io.StdIn
+
+
 /**
  * @author ${user.name}
  */
@@ -46,13 +57,29 @@ object App {
   }
   
   def main(args : Array[String]) {
-    println("concat arguments = " + foo(args))
 
-    //val dbType = args(0)
-    //println("dbType = " + args(0))
+    //println("concat arguments = " + foo(args))
 
-    dbConnect()
+    //dbConnect()
 
+    implicit val system = ActorSystem("my-system")
+    implicit val materializer = ActorMaterializer()
+    // needed for the future flatMap/onComplete in the end
+    implicit val executionContext = system.dispatcher
+
+    val route =
+      path("test") {
+        get {
+          complete("OK")
+        }
+      }
+
+    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+
+    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+    StdIn.readLine() // let it run until user presses return
+    bindingFuture
+      .flatMap(_.unbind()) // trigger unbinding from the port
+      .onComplete(_ => system.terminate()) // and shutdown when done
   }
-
 }
