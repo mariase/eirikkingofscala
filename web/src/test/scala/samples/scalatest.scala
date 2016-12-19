@@ -50,6 +50,8 @@ class StackSuite extends Assertions {
 /*
 Here's an example of a FunSuite with ShouldMatchers mixed in:
 */
+
+/*
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 
@@ -74,7 +76,7 @@ class ListSuite extends FunSuite with ShouldMatchers {
     List("fee", "fie", "foe", "fum") should have length (4)
   }
 }
-
+*/
 /*
 ScalaTest also supports the behavior-driven development style, in which you
 combine tests with text that specifies the behavior being tested. Here's
