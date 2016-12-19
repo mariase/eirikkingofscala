@@ -5,14 +5,14 @@ import java.sql.DriverManager
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-//import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
-import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
-import akka.event.Logging
+import io.circe.syntax._
+import io.circe.generic.auto._
+import de.heikoseeberger.akkahttpcirce.CirceSupport._
 
 import scala.io.StdIn
-
+import scalaj.http.{Http, HttpOptions}
 
 /**
  * @author ${user.name}
@@ -20,6 +20,9 @@ import scala.io.StdIn
 object App {
 
   private val config = ConfigFactory.load()
+  private val book = new Book(1,"War and Peace","Tolstoy L.N.",1000, 25)
+  var bookStore:Array[Book] = new Array[Book](10)
+  bookStore(1) = book
 
   def foo(x : Array[String]) = x.foldLeft("")((a,b) => a + b)
 
@@ -55,6 +58,23 @@ object App {
     connection.close()
 
   }
+
+  def orderBooks(): Unit = {
+    val order = new Order(1,1,20,0)
+    var result = scalaj.http.Http("http://localhost:8080/test").postData(order.asJson.toString)
+      .header("Content-Type", "application/json")
+      .header("Charset", "UTF-8")
+      .option(HttpOptions.readTimeout(10000)).asString
+    println("Printing result: " + result.body)
+
+  }
+
+  def handleOrder(order: Order): String = {
+    val orderedBook = bookStore(order.itemId)
+    order.totalOrderValue = order.amount*orderedBook.price
+    order.asJson.toString()
+    //order.totalOrderValue
+  }
   
   def main(args : Array[String]) {
 
@@ -70,16 +90,31 @@ object App {
     val route =
       path("test") {
         get {
-          complete("OK")
+          complete(book.asJson.toString())
+        } ~
+        post{
+          decodeRequest{
+            entity(as[Order]) { order =>
+              complete(handleOrder(order))
+            }
+          }
         }
       }
 
-    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
+    val bindingFuture = akka.http.scaladsl.Http().bindAndHandle(route, "localhost", 8080)
 
     println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+
+    orderBooks()
+
     StdIn.readLine() // let it run until user presses return
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ => system.terminate()) // and shutdown when done
   }
+}
+
+case class Book(id: Int, name: String, author: String, pages: Int, price: Int){}
+
+case class Order(id: Int, itemId: Int, amount: Int,var totalOrderValue: Int){
 }
