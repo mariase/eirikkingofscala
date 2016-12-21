@@ -3,16 +3,19 @@ import com.typesafe.config.ConfigFactory
 import java.sql.Connection
 import java.sql.DriverManager
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
+import akka.actor.{Actor, ActorSystem, Props}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import akka.pattern.ask
+import akka.util.Timeout
+import scala.concurrent.duration._
+import scala.concurrent.Future
 import io.circe.syntax._
 import io.circe.generic.auto._
 import de.heikoseeberger.akkahttpcirce.CirceSupport._
 
 import scala.io.StdIn
-import scalaj.http.{Http, HttpOptions}
+import scalaj.http.HttpOptions
 
 /**
  * @author ${user.name}
@@ -20,7 +23,7 @@ import scalaj.http.{Http, HttpOptions}
 object App {
 
   private val config = ConfigFactory.load()
-  private val book = new Book(1,"War and Peace","Tolstoy L.N.",1000, 25)
+  private val book = Book(1,"War and Peace","Tolstoy L.N.",1000, 25)
   var bookStore:Array[Book] = new Array[Book](10)
   bookStore(1) = book
 
@@ -36,9 +39,9 @@ object App {
     val username = dbConfig.getString("username")
     val password = dbConfig.getString("password")
 
-    var connection:Connection = null
-
     Class.forName(driver)
+
+    var connection:Connection = null
     connection = DriverManager.getConnection(url, username, password)
 
     val statement = connection.createStatement()
@@ -60,8 +63,8 @@ object App {
   }
 
   def orderBooks(): Unit = {
-    val order = new Order(1,1,20,0)
-    var result = scalaj.http.Http("http://localhost:8080/test").postData(order.asJson.toString)
+    val order = Order(1,1,20,0)
+    val result = scalaj.http.Http("http://localhost:8080/test").postData(order.asJson.toString)
       .header("Content-Type", "application/json")
       .header("Charset", "UTF-8")
       .option(HttpOptions.readTimeout(10000)).asString
@@ -80,10 +83,13 @@ object App {
 
     //println("concat arguments = " + foo(args))
 
-    //dbConnect()
+    // Task #6 in Eirik´ list
+    // dbConnect()
 
     implicit val system = ActorSystem("my-system")
     implicit val materializer = ActorMaterializer()
+    implicit val timeout = Timeout (25 seconds)
+
     // needed for the future flatMap/onComplete in the end
     implicit val executionContext = system.dispatcher
 
@@ -93,11 +99,7 @@ object App {
           complete(book.asJson.toString())
         } ~
         post{
-          decodeRequest{
-            entity(as[Order]) { order =>
-              complete(handleOrder(order))
-            }
-          }
+          decodeRequest(entity(as[Order]) { order => complete(handleOrder(order)) })
         }
       }
 
@@ -105,7 +107,21 @@ object App {
 
     println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
 
-    orderBooks()
+    val actorRequest = system.actorOf(Props(new ItemCreationRequest()))
+    val actorResponse = system.actorOf(Props(new ItemCreation()))
+    val future = actorResponse ? InitializeActor(bookStore)
+
+    actorRequest ! StartCreatingRequest(actorResponse)
+
+
+    future.map { result  =>
+      val tempBookStore = result.asInstanceOf[Array[Book]]
+      println("Result received" + tempBookStore(2).toString)
+    }
+
+
+    // Task #8 in Eirik´s list
+    //orderBooks()
 
     StdIn.readLine() // let it run until user presses return
     bindingFuture
@@ -116,5 +132,4 @@ object App {
 
 case class Book(id: Int, name: String, author: String, pages: Int, price: Int){}
 
-case class Order(id: Int, itemId: Int, amount: Int,var totalOrderValue: Int){
-}
+case class Order(id: Int, itemId: Int, amount: Int,var totalOrderValue: Int){}
